@@ -4,6 +4,8 @@ Analysis of the Correlation between University User Behavior Characteristics and
 
 This project explores the relationships between student enrollment decisions (DATA2002 vs. DATA2902), historical academic performance (WAM), study effort (weekly study hours), and their self-set target grades for the **DATA2x02** course at the University of Sydney.
 
+Report save in index.html
+
 ## 📋 Project Overview
 
 The study utilizes statistical methods to analyze survey data, investigating whether academic ambition correlates with unit selection and whether past performance accurately predicts current goals and effort levels.
