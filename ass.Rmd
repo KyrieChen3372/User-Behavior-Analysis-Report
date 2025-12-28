@@ -1,0 +1,393 @@
+---
+title: "DATA2002 Self-Project"
+date: "`r Sys.Date()`"
+author: "530333591"
+output:
+  html_document:
+    code_folding: hide
+    self_contained: true
+    code_download: true
+    toc: true
+    toc_float: true
+    number_sections: true
+bibliography: reference.bib
+link-citations: yes
+csl: apa.csl
+---
+
+```{r setup, include=FALSE}
+# This chunk sets up global options for the entire document.
+knitr::opts_chunk$set(
+  echo = TRUE,      
+  message = FALSE,   
+  warning = FALSE,   
+  fig.align = 'center' 
+)
+```
+
+```{r load-packages-and-data, message=FALSE, warning=FALSE}
+# load packages for the report
+library(tidyverse)
+library(janitor)
+library(hms)
+library(readxl) 
+library(here) 
+library(gt) 
+library(visdat)
+library(infer)
+library(car)
+
+# Set a consistent plotting theme for the entire report
+theme_set(theme_bw())
+
+# Load and clean the dataset
+x <- read_excel(here("data", "DATA2x02_survey_2025_Responses.xlsx"), .name_repair = "unique") %>%
+  clean_names()
+```
+# Introduction
+This dataset represents a convenience sample of students enrolled in the DATA2X02 course, rather than a random sample. This is because the methodology is subject to self-selection bias; since participation was voluntary, the students who chose to complete the survey may be systematically different from those who did not.
+Potential Biases:Social Desirability Bias[@Naher2012]. This occurs when individuals answer questions in a socially acceptable manner rather than truth.Variables most likely affected: "How many hours do you study per week?" and "How often do you drink alcohol?".
+Recall Bias: This bias arises because people have difficulty accurately remembering past behaviors and feelings.Variables most likely affected: "How many hours do you study per week?" and "What time do you usually go to sleep?". 
+3.Recommendations for Improvement:For the question, "What time do you usually go to bed?it should be split into two separate questions between weekdays and weekends.
+For a question like, "How much time do you spend on short video apps?", the open-ended response format is problematic as it is difficult for respondents to estimate accurately This should be changed to a categorical format with predefined ranges, such as:a. Less than 30 mins b. 30 mins - 1 hour c. 1-2 hours
+
+## Data Clean
+The purpose of this code is to initial clean and inspect data. Re-name dataset to make it easier to work. And visualize missing values to check overview of data quality.
+```{r rename-and-inspect-data, message=FALSE, warning=FALSE, fig.cap="A visualization of missing data across all variables."}
+# create new short and sort vector names
+old_names = colnames(x)
+new_names <- c(
+  "timestamp",
+  "target_grade",
+  "assignment_preference",
+  "trimester_or_semester",
+  "age",
+  "tendency_yes_or_no",
+  "pay_rent",
+  "stall_choice",
+  "weetbix_count",
+  "weekly_food_spend",
+  "living_arrangements",
+  "weekly_alcohol",
+  "believe_in_aliens",
+  "height",
+  "commute",
+  "daily_anxiety_frequency",
+  "weekly_study_hours",
+  "work_status",
+  "social_media",
+  "gender",
+  "average_daily_sleep",
+  "usual_bedtime",
+  "sleep_schedule",
+  "sibling_count",
+  "allergy_count",
+  "diet_style",
+  "random_number",
+  "favourite_number",
+  "favourite_letter",
+  "drivers_license",
+  "relationship_status",
+  "daily_short_video_time",
+  "computer_os",
+  "steak_preference",
+  "dominant_hand",
+  "enrolled_unit",
+  "weekly_exercise_hours",
+  "weekly_paid_work_hours",
+  "assignments_on_time",
+  "used_r_before",
+  "team_role_type",
+  "university_year",
+  "favourite_anime",
+  "fluent_languages",
+  "readable_languages",
+  "country_of_birth",
+  "wam",
+  "shoe_size",
+  "books_read_highschool",
+  "dailywater_consumption",
+  "perceived_old",
+  "prefer_music"
+)
+
+# overwrite the old names with the new names:
+colnames(x) = new_names
+
+# combine old and new into a data frame to check them:
+name_combo = bind_cols(New = new_names, Old = old_names)
+# Display the comparison table using the gt package
+name_combo |> gt::gt()
+
+# check the missing data:
+visdat::vis_miss(x) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 0))
+```
+
+# Results
+## Do students who choose more difficult course units have systematically expected higher result in their grades?
+
+We know that DATA2902 is more challenging in terms of teaching depth and prerequisite requirements than DATA2002. This analysis aims to explore whether the course units chosen by students (DATA2902 vs. DATA2002) have a statistically significant correlation with their aimed final grades in the DATA2x02 course.
+
+We will use the Chi-squared Test to verify these two hypotheses. A significance level (α) of 0.05 is set for the test.
+
+To answer this question using a statistical approach, we establish the following two competing hypotheses:
+
+Null Hypothesis (H₀): The course unit selected by students and their aimed final grade are independent of each other; there is no association between them.
+
+Alternative Hypothesis (H₁): The course unit selected by students and their aimed final grade are not independent; there is an association between them.
+
+Data Analysis Results：
+The table displays the frequency distribution of aimed final grades (from High Distinction to Fail) across the different course units (DATA2002 and DATA2902).
+In the unit DATA2002, 147 get HD(52.12%), 92 get D(32.62%) out of 282 studnets, In the unit DATA2902, 64 get HD(77.1%), 15 get D(18.07%) out of 83 students(Calculate after remove no-meaning value).
+From the descriptive data, a clear observational trend is that students enrolled in the more advanced unit (DATA2902) have a expected grade distribution towards higher grade(HD).
+
+```{r prepare count chi-data}
+# Select the two columns we need and create data frame
+chi_test_data <- x %>%
+  select(enrolled_unit, target_grade)%>%
+  na.omit()
+
+#  Rename columns
+colnames(chi_test_data) <- c("unit", "grade")
+
+# Now that 'chi_test_data' exists, we can use it to create 'plot_data'
+plot_data <- chi_test_data %>%
+  count(unit, grade)
+plot_data
+```
+Graph of Distribution between Unit and aimed grade:
+```{r plot-distribution}
+# Plot by using count unit and grade
+ggplot(plot_data, aes(x = unit, y = n, fill = grade)) +
+  geom_col(position = "stack") + 
+  labs(
+    title = "Distribution between Unit and Aimed Grade",
+    x = "Enrolled Unit",
+    y = "Count of Students",
+    fill = "Target Grade"
+  ) +
+  theme_bw() +
+  scale_fill_brewer(palette = "RdYlBu", direction = -1)
+```
+
+Analysis Chi-square result：
+
+We get the first-step aimed result by just looking at how distribute in HD and D in 2 groups and compare them by percentage.
+By using Chi-squared test find that:
+X-squared = 18.116, df = 4, p-value = 0.001171 
+p-value is less than our pre-determined significance level (α), we reject the null hypothesis (H₀):The course unit selected by students and their expected final grade are independent of each other. So we get the conclusion:The course unit selected by students DATA2002 and DATA2902 and their expected final grade from High Distincition to fail are not independent; there is an association between them.
+
+Limitation of Chi-squared Test:
+1.Only indicates the presence of an association, not its strength or direction. A significant result tells us the variables are dependent, but not how strongly they are related
+2.The test is sensitive to small expected frequencies in the contingency table (typically less than 5), which can make the result unreliable.
+```{r prepare-chi-test-data}
+# Prepare for chi-test
+chi_test_data <- x %>%
+  select(enrolled_unit, target_grade)%>%
+  na.omit()
+colnames(chi_test_data) <- c("unit", "grade")
+
+contingency_table <- table(chi_test_data$unit, chi_test_data$grade)
+print(contingency_table)
+# Print the result for chi-square test
+chisq.test(contingency_table)
+```
+## Is there a significant difference exists in the mean Weighted Average Mark (WAM) among students in different target grade groups (High Distinction, Distinction, etc.)?
+The further analyse focus on the target grade set by students merely an aspiration, or is it associated with their past academic performance?
+
+Statistical Hypotheses:
+Null Hypothesis (H₀): The mean WAM is the same across all target grade groups.
+
+Alternative Hypothesis (H₁): The mean WAM of at least one target grade group is different from the others.
+
+By using ANOVA-model as method,steps are: Data preparation, Visualization, ANOVA analysis, Model advanced assumption check:Normality of Residuals and Homogeneity of Variances.
+Data Preparation and Visuation:
+```{r prepare-anova-data}
+# Data preparation and remove missing value
+anova_data <- x %>% 
+  select(target_grade, wam) %>%
+  na.omit() %>%
+  mutate(
+    target_grade = factor(target_grade, 
+                          levels = c("High Distinction", "Distinction", "Credit", "Pass", "Fail"))
+  )
+
+```
+
+```{r descriptive-stats-and-plot, fig.cap="Boxplot of WAM distributions across different target grade groups."}
+#calculate each groups wam standard deviation and size
+descriptive_stats <- anova_data %>%
+  group_by(target_grade) %>%
+  summarise(
+    count = n(),
+    mean_wam = mean(wam),
+    sd_wam = sd(wam)
+  )
+
+descriptive_stats %>%
+  gt() %>% 
+  fmt_number( 
+    columns = c(mean_wam, sd_wam), 
+    decimals = 1 
+  ) %>%
+  cols_label( 
+    target_grade = "Target Grade",
+    count = "Count",
+    mean_wam = "Mean WAM",
+    sd_wam = "Standard Deviation"
+  ) %>%
+  tab_header(
+    title = "Descriptive Statistics of WAM",
+    subtitle = "Grouped by target grade"
+  )
+
+# use ggplot2 to prepare visualization
+ggplot(anova_data, aes(x = target_grade, y = wam, fill = target_grade)) +
+  geom_boxplot(alpha = 0.8) +
+  labs(
+    title = "WAM distribution in each groups",
+    x = "Target Grade",
+    y = "WAM"
+  ) +
+  theme(legend.position = "none")
+```
+ANOVA analysis:
+F-value:9.94 measures the ratio of the variation between groups to the variation within groups.
+Pr>F(p-value):1.37-07 less than 0.05.Reject the Null Hypothesis,at least one target grade WAM in group is different from the others.There is a strong significant association between the target grades set by students and their past academic performance (WAM)
+```{r ANOVA analysis} 
+  # Run the ANOVA model
+aov_model <- aov(wam ~ target_grade, data = anova_data)
+
+# Show ANOVA result（F-statistics and P value）
+summary(aov_model)
+```
+
+
+Follow ANOVA model, we get the conclusion but we need check model advanced assumption: Normality of Residuals and Homogeneity of Variances.
+
+Normality of Residuals check:
+Null Hypothesis (H₀): The residuals comes from a normal distribution. 
+
+Alternative Hypothesis (H₁): The data does not come from a normal distribution.
+
+The Shapiro-Wilk test[@Harusz2014] is a statistical method used to determine whetehr a set of data comes from a normal distribution. By testing residuals, which are the differences between each student's actual WAM and the WAM predicted by the model.
+
+W = 0.67319: This value is relatively far from 1, the initial indication does not fit a normal distribution well.( More close to 1 better fits normal distribution)
+
+p-value < 2.2e-16. Reject H₀. Indicates that the residuals of ANOVA model do not follow a normal distribution. This is a violation of a core assumption of the ANOVA model.
+```{r shapiro-test-residuals}
+# Check Normality of Residuals, we wish p-value > 0.05
+shapiro.test(resid(aov_model))
+```
+
+
+Levene's test[@ParraFrutos2013] is to check the variances of two or more groups are equal: Variance of WAM is the same across the different target grade groups (HD, D, C, P, F).[@car2019]
+
+Null Hypothesis (H₀): The variances of all groups are equal.
+
+Alternative Hypothesis (H₁): The variance of at least one group is different from the others.
+
+Interpretation of Results:
+
+F value = 0.7402 Small F value means the difference in variances between the groups is not large.
+
+p-value = 0.5651 We can not reject H₀.
+
+Therefore, we can conclude that the assumption of homogeneity of variances is met.
+
+```{r levene-test}
+# Check Homogeneity of Variances, wish p-value>0.05
+leveneTest(wam ~ target_grade, data = anova_data)
+```
+
+Conclusion:
+Meets the assumption of homogeneity of variance but violates the assumption of normality of residuals[@Schultzmeister2012].
+
+However, ANOVA is considered robust so "there is a significant difference in WAM across the different target grade groups" is most likely still reliable.
+There are indeed significant statistical differences in WAM of students with different target grades in the past.
+
+Limitation of ANOVA test:
+1.ANOVA is sensitive to outliers,potentially leading to incorrect conclusions.
+2.A significant F-test only tells us that at least one group mean is different from the others,not specify which particular groups are different. We need more test to tell sepecific one.
+
+## Permutation Test: Is there a monotonic relationship between a student's  performance (WAM) and their current level of effort (weekly study hours)?
+Is student effort truly associated with their academic outcomes?
+
+Data clean:
+```{r prepare-corr-data}
+# Data clean
+corr_data <- x %>%
+  select(wam, weekly_study_hours) %>%
+  na.omit()
+```
+Calculate Spearman correlation:
+
+Spearman correlation is used to measure the strength and direction of a monotonic relationship Calculate observed Spearman correlation between students' WAM and their weekly study hours is statistically significant.
+
+Then Generate Null Distribution by performing Permutation Test, each of the 5000 shuffles will recalculates the correlation coefficient.
+
+Spearman Correlation: 0.131:a weak, positive correlation.Students with a higher WAM tend to study for little more hours per week.
+
+H0:There is no correlation between a student's WAM and their weekly study hours
+H1:There is a correlation between a student's WAM and their weekly study hours 
+P-value: 0.01: very small value than 0.05. Reject H0.
+
+The results indicate that there is a statistically significant, weak, positive correlation between WAM and weekly study hours. 
+```{r permutation-test-correlation, fig.cap="Null distribution from the permutation test for correlation."}
+
+obs_corr <- cor(
+  corr_data$wam, 
+  corr_data$weekly_study_hours, 
+  method = "spearman"
+)
+print(paste("Observed Spearman Correlation:", round(obs_corr, 3)))
+
+#Permutation
+set.seed(121) 
+null_distribution <- corr_data %>%
+  specify(response = wam, explanatory = weekly_study_hours) %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 5000, type = "permute") %>%
+  calculate(stat = "correlation")
+
+
+p_value_perm <- get_p_value(
+  null_distribution, 
+  obs_stat = obs_corr, 
+  direction = "two-sided"
+)
+
+print(paste("P-value:", p_value_perm))
+
+#visualiazation
+visualize(null_distribution) +
+  shade_p_value(obs_stat = obs_corr, direction = "two-sided") +
+  labs(
+    title = "Permutation Test",
+    subtitle = "Red line: The observed correlation coefficient",
+    x = "Simulated Spearman Correlation Coefficients",
+    y = "count"
+  )
+```
+
+The Grey Histogram (Null Distribution): This represents the "world of random chance". It is the distribution of correlation coefficients calculated after randomly shuffling your data 5,000 times. The majority of calculated correlations would be very close to 0.
+The Red Line (Observed Statistic):the actual Spearman correlation coefficient calculated from your realvdata  0.131.
+The red line (the real relationship) falls into the right tail of the grey histogram (the world of chance),which is extremely rare event in a world.
+
+We got the conclusion:the weak positive correlation between weekly study hours and WAM is real and statistically significant.
+
+Limitation of Permutation Test:
+1.It establishes correlation, not causation,other confounding variables may exist like IQ level.
+2.Working with large sample may take more time in repeat permutations.
+
+# Conclusion
+We found that students don't just set their grade targets randomly. The course they're in whether it's the standard DATA2002 or the more advanced DATA2902—is strongly linked to the grade they're aiming for (p < 0.001).So students in the harder course tend to set higher goals for themselves[@Altun2025].
+
+Then we want figure out whether they just wishes? Not at all. Our next analysis showed that students who aim higher really do have higher past GPAs (WAMs) to back it up (p < 0.001). This suggests students have a pretty good read on their own abilities, and their expectations are grounded in reality.
+
+So where do those good grades come from? Our final test connected the dots between their academic performance (WAM) and their current effort (weekly study hours). The result was clear: students with higher WAMs also tend to study more each week (p < 0.01). It’s a straightforward, data-backed look at how effort is linked to results.
+
+This analysis paints a clear picture of a high-performing student: they take on more challenging courses, their ambitious goals are backed by real academic ability, and that ability is connected to putting in more time and effort.
+
+# References
