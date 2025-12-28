@@ -60,10 +60,12 @@ The analysis is based on student survey data, including the following key variab
    ```bash
    git clone [https://github.com/your-username/DATA2002-Analysis.git](https://github.com/KyrieChen3372/User-Behavior-Analysis-Report.git)
   ```
+
 2.Open the project in RStudio.
 
 3.Install the required R packages:
-    ```bash
-    install.packages(c("tidyverse", "infer", "visdat", "ggplot2"))
-  ```
+  ```bash
+  install.packages(c("tidyverse", "infer", "visdat", "ggplot2"))
+ ```
+
 4.Click the Knit button to generate the full HTML analysis report.
